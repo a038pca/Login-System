@@ -13,7 +13,11 @@ const App = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name={Screens.Login} component={Login} />
-        <Stack.Screen name={Screens.ResetPassword} component={ResetPassword} />
+        <Stack.Screen
+          name={Screens.ResetPassword}
+          component={ResetPassword}
+          options={{ headerShown: true }}
+        />
         <Stack.Screen name={Screens.Welcome} component={Welcome} />
       </Stack.Navigator>
     </NavigationContainer>

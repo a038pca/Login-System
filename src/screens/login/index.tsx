@@ -9,8 +9,8 @@ import * as Keychain from 'react-native-keychain';
 import { RootStackParamList, Screens } from '~/types/navigation';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Credentials } from '~/types/login';
-
-const usersKey = 'users';
+import { AsyncStorageKey } from '~/types/async-storage';
+import { getUsersAsync } from '~/utils/async-storage';
 
 const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   const [hidePassword, setHidePassword] = useState(true);
@@ -20,11 +20,11 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   // Use async storage to mock the user information in server's database
   // Initialize default users (Assume there are more than 1 users)
   useEffect(() => {
-    AsyncStorage.getItem(usersKey)
+    AsyncStorage.getItem(AsyncStorageKey.Users)
       .then(serializedUsers => {
         if (!serializedUsers) {
           AsyncStorage.setItem(
-            usersKey,
+            AsyncStorageKey.Users,
             JSON.stringify([{ username: 'esdlife', password: 'P@ssw0rd' }]),
           );
         }
@@ -40,8 +40,7 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   const onLogin = async () => {
     try {
       const credential = credentialRef.current;
-      const serializedUsers = await AsyncStorage.getItem(usersKey);
-      const users = JSON.parse(serializedUsers ?? '');
+      const users = await getUsersAsync();
 
       if (users.some((user: Credentials) => isEqual(user, credential))) {
         setShowError(false);
