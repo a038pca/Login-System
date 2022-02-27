@@ -1,7 +1,11 @@
-export type Credentials = {
+export interface Credentials {
   username: string;
   password: string;
-};
+}
+
+export interface User extends Credentials {
+  askSavePassword: boolean;
+}
 
 export interface Field {
   key: string;

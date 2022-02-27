@@ -1,21 +1,30 @@
-import React, { memo, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { memo, useEffect, useState } from 'react';
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextField } from 'rn-material-ui-textfield';
 import FastImage from 'react-native-fast-image';
 import images from '~/assets/images';
-import isEqual from 'react-fast-compare';
 import * as Keychain from 'react-native-keychain';
 import { RootStackParamList, Screens } from '~/types/navigation';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Credentials } from '~/types/login';
+import { Credentials, User } from '~/types/login';
 import { AsyncStorageKey } from '~/types/async-storage';
 import { getUsersAsync } from '~/utils/async-storage';
 
 const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
+  const [credentials, setCredentials] = useState<Credentials>({
+    username: '',
+    password: '',
+  });
   const [hidePassword, setHidePassword] = useState(true);
   const [showError, setShowError] = useState(false);
-  const credentialRef = useRef<Credentials>({ username: '', password: '' });
 
   // Use async storage to mock the user information in server's database
   // Initialize default users (Assume there are more than 1 users)
@@ -25,30 +34,71 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
         if (!serializedUsers) {
           AsyncStorage.setItem(
             AsyncStorageKey.Users,
-            JSON.stringify([{ username: 'esdlife', password: 'P@ssw0rd' }]),
+            JSON.stringify([
+              {
+                username: 'esdlife',
+                password: 'P@ssw0rd',
+                askSavePassword: false,
+              },
+            ]),
           );
         }
       })
       .catch(err => console.error(err));
   }, []);
 
+  // Retrieve saved password
+  useEffect(() => {
+    Keychain.getGenericPassword()
+      .then(credentials => {
+        if (credentials) {
+          const { username, password } = credentials;
+          setCredentials({ username, password });
+        }
+      })
+      .catch(err => console.log(err));
+  }, []);
+
   const getFieldValue = (value: string, fieldName: keyof Credentials) => {
-    const credential = credentialRef.current;
-    credential[fieldName] = value;
+    credentials[fieldName] = value;
   };
 
   const onLogin = async () => {
     try {
-      const credential = credentialRef.current;
       const users = await getUsersAsync();
+      const matchedUser = users.find(
+        (user: User) =>
+          user.username === credentials.username &&
+          user.password === credentials.password,
+      );
 
-      if (users.some((user: Credentials) => isEqual(user, credential))) {
+      if (matchedUser) {
         setShowError(false);
-        await Keychain.setGenericPassword(
-          credential.username,
-          credential.password,
-        );
-        navigation.navigate(Screens.Welcome);
+
+        if (!matchedUser.askSavePassword) {
+          matchedUser.askSavePassword = true;
+          AsyncStorage.setItem(AsyncStorageKey.Users, JSON.stringify(users));
+
+          Alert.alert('Save Password', 'Do you want to save password?', [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+              onPress: () => navigation.navigate(Screens.Welcome),
+            },
+            {
+              text: 'OK',
+              onPress: async () => {
+                await Keychain.setGenericPassword(
+                  credentials.username,
+                  credentials.password,
+                );
+                navigation.navigate(Screens.Welcome);
+              },
+            },
+          ]);
+        } else {
+          navigation.navigate(Screens.Welcome);
+        }
       } else {
         setShowError(true);
       }
@@ -72,11 +122,13 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
           label="Username"
           autoCapitalize={'none'}
           autoCorrect={false}
+          defaultValue={credentials.username}
           textContentType={'username'}
           onChangeText={(text: string) => getFieldValue(text, 'username')}
         />
         <TextField
           label="Password"
+          defaultValue={credentials.password}
           secureTextEntry={hidePassword}
           textContentType={'password'}
           onChangeText={(text: string) => getFieldValue(text, 'password')}
