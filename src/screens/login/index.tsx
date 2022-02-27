@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TextField } from 'rn-material-ui-textfield';
 import FastImage from 'react-native-fast-image';
@@ -118,7 +118,20 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
         onPress={onLogin}>
         <Text style={{ fontSize: 18 }}>Login</Text>
       </Pressable>
-      {/* <FlatList horizontal scrollEnabled={false} /> */}
+      <View>
+        <FlatList
+          data={[images.banner1, images.banner2, images.banner3]}
+          renderItem={({ item }) => (
+            <FastImage
+              source={item}
+              style={{ width: 132, height: 76, borderRadius: 8 }}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        />
+      </View>
     </View>
   );
 };
