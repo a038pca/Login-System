@@ -7,7 +7,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { Field, FieldsValue as FieldValueMap } from '~/types/login';
+import { Field, FieldValueMap } from '~/types/login';
 import FormField from './FormField';
 
 interface Props {

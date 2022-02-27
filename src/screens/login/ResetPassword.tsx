@@ -8,6 +8,7 @@ import { RootStackParamList, Screens } from '~/types/navigation';
 import { getUsersAsync } from '~/utils/async-storage';
 import { AsyncStorageKey } from '~/types/async-storage';
 import { FieldValueMap } from '~/types/login';
+import { encryptData } from '~/utils/aes-crypto';
 
 const passwordRules = [
   { regex: /(?=.*?[A-Z])/, error: 'At lease 1 uppercase letter' },
@@ -55,7 +56,9 @@ const ResetPassword = ({
       const users = await getUsersAsync();
       const foundUser = users.find(user => user.username === currentUser);
       if (foundUser) {
-        foundUser.password = newPassword;
+        const encryptedPassword = await encryptData(newPassword);
+        foundUser.password = encryptedPassword.cipher;
+        foundUser.iv = encryptedPassword.iv;
         AsyncStorage.setItem(AsyncStorageKey.Users, JSON.stringify(users));
 
         setShowSuccess(true);

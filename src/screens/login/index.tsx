@@ -17,6 +17,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Credentials, User } from '~/types/login';
 import { AsyncStorageKey } from '~/types/async-storage';
 import { getUsersAsync } from '~/utils/async-storage';
+import { decryptData, encryptData } from '~/utils/aes-crypto';
 
 const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   const [credentials, setCredentials] = useState<Credentials>({
@@ -32,16 +33,21 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
     AsyncStorage.getItem(AsyncStorageKey.Users)
       .then(serializedUsers => {
         if (!serializedUsers) {
-          AsyncStorage.setItem(
-            AsyncStorageKey.Users,
-            JSON.stringify([
-              {
-                username: 'esdlife',
-                password: 'P@ssw0rd',
-                askSavePassword: false,
-              },
-            ]),
-          );
+          encryptData('P@ssw0rd')
+            .then(({ cipher, iv }) => {
+              AsyncStorage.setItem(
+                AsyncStorageKey.Users,
+                JSON.stringify([
+                  {
+                    username: 'esdlife',
+                    password: cipher,
+                    iv: iv,
+                    askSavePassword: false,
+                  },
+                ]),
+              );
+            })
+            .catch(err => console.error(err));
         }
       })
       .catch(err => console.error(err));
@@ -50,13 +56,13 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   // Retrieve saved password
   useEffect(() => {
     Keychain.getGenericPassword()
-      .then(credentials => {
-        if (credentials) {
-          const { username, password } = credentials;
+      .then(keychainCredentials => {
+        if (keychainCredentials) {
+          const { username, password } = keychainCredentials;
           setCredentials({ username, password });
         }
       })
-      .catch(err => console.log(err));
+      .catch(err => console.error(err));
   }, []);
 
   const getFieldValue = (value: string, fieldName: keyof Credentials) => {
@@ -66,11 +72,20 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   const onLogin = async () => {
     try {
       const users = await getUsersAsync();
-      const matchedUser = users.find(
-        (user: User) =>
-          user.username === credentials.username &&
-          user.password === credentials.password,
-      );
+      let matchedUser;
+      for (const user of users) {
+        if (credentials.username === user.username) {
+          const password = await decryptData({
+            cipher: user.password,
+            iv: user.iv,
+          });
+
+          if (credentials.password === password) {
+            matchedUser = user;
+            break;
+          }
+        }
+      }
 
       if (matchedUser) {
         setShowError(false);

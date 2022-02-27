@@ -4,6 +4,7 @@ export interface Credentials {
 }
 
 export interface User extends Credentials {
+  iv: string;
   askSavePassword: boolean;
 }
 
@@ -13,6 +14,6 @@ export interface Field {
   isPassword?: boolean;
 }
 
-export interface FieldsValue {
+export interface FieldValueMap {
   [key: string]: string;
 }
