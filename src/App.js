@@ -11,14 +11,26 @@ const Stack = createNativeStackNavigator();
 const App = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name={Screens.Login} component={Login} />
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: '#000000' },
+          headerTintColor: '#FFFFFF',
+          headerBackTitleVisible: false,
+          headerTitleStyle: {
+            fontFamily: 'OpenSans-SemiBold',
+          },
+        }}>
         <Stack.Screen
-          name={Screens.ResetPassword}
-          component={ResetPassword}
-          options={{ headerShown: true }}
+          name={Screens.Login}
+          component={Login}
+          options={{ headerShown: false }}
         />
-        <Stack.Screen name={Screens.Welcome} component={Welcome} />
+        <Stack.Screen name={Screens.ResetPassword} component={ResetPassword} />
+        <Stack.Screen
+          name={Screens.Welcome}
+          component={Welcome}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

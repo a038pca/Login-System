@@ -1,6 +1,6 @@
 export enum Screens {
   Login = 'Login',
-  ResetPassword = 'ResetPassword',
+  ResetPassword = 'Reset Password',
   Welcome = 'Welcome',
 }
 

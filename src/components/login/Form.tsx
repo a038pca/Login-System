@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { ListRenderItemInfo } from 'react-native';
 import {
   FlatList,
   Pressable,
@@ -36,42 +37,84 @@ const Form = (props: Props) => {
     onSubmit(fieldValueMap).then(setErrorMessage);
   };
 
+  const renderFormField = ({ item }: ListRenderItemInfo<Field>) => (
+    <FormField
+      data={item}
+      onChangeText={(text: string) => {
+        const fieldValueMap = fieldValueMapRef.current;
+        fieldValueMap[item.key] = text;
+      }}
+    />
+  );
+
   return (
     <View style={[styles.container, style]}>
-      {title && <Text>{title}</Text>}
+      {title && <Text style={styles.title}>{title}</Text>}
       <FlatList
         data={fields}
-        renderItem={({ item }) => (
-          <FormField
-            data={item}
-            onChangeText={(text: string) => {
-              const fieldValueMap = fieldValueMapRef.current;
-              fieldValueMap[item.key] = text;
-            }}
-          />
-        )}
+        renderItem={renderFormField}
         scrollEnabled={false}
       />
       <Text style={styles.error}>{errorMessage}</Text>
       <Pressable
-        style={[{ alignItems: 'flex-end' }, submitButtonStyle]}
+        style={({ pressed }) => [
+          styles.button,
+          pressed ? styles.activeButton : styles.inactiveButton,
+          submitButtonStyle,
+        ]}
         onPress={submit}>
-        <Text>{submitButtonText}</Text>
+        {({ pressed }) => (
+          <Text
+            style={[
+              styles.buttonText,
+              pressed ? styles.activeButtonText : styles.inactiveButtonText,
+            ]}>
+            {submitButtonText}
+          </Text>
+        )}
       </Pressable>
     </View>
   );
 };
 
-export default Form;
-
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  },
+  title: {
+    fontFamily: 'OpenSans-SemiBold',
+    marginBottom: 4,
   },
   error: {
+    fontFamily: 'OpenSans-Medium',
+    fontSize: 12,
     color: '#FF0000',
   },
+  button: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignSelf: 'flex-end',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#000000',
+  },
+  inactiveButton: {
+    backgroundColor: '#000000',
+  },
+  activeButton: {
+    backgroundColor: '#FFFFFF',
+  },
+  buttonText: {
+    fontFamily: 'OpenSans-SemiBold',
+  },
+  inactiveButtonText: {
+    color: '#FFFFFF',
+  },
+  activeButtonText: {
+    color: '#000000',
+  },
 });
+
+export default Form;
