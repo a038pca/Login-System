@@ -1,5 +1,4 @@
 import React, { useRef, useState } from 'react';
-import { ListRenderItemInfo } from 'react-native';
 import {
   FlatList,
   Pressable,
@@ -7,13 +6,17 @@ import {
   Text,
   View,
   ViewStyle,
+  ListRenderItemInfo,
+  TextStyle,
 } from 'react-native';
-import { Field, FieldValueMap } from '~/types/login';
+import { Field, FieldValueMap } from '~/types/form';
 import FormField from './FormField';
+import sharedStyles from '~/styles';
 
 interface Props {
   style?: ViewStyle;
   title?: string;
+  titleStyle?: TextStyle;
   fields: Field[];
   submitButtonText: string;
   submitButtonStyle?: ViewStyle;
@@ -24,6 +27,7 @@ const Form = (props: Props) => {
   const {
     style,
     title,
+    titleStyle,
     fields,
     submitButtonText,
     submitButtonStyle,
@@ -34,7 +38,9 @@ const Form = (props: Props) => {
 
   const submit = () => {
     const fieldValueMap = fieldValueMapRef.current;
-    onSubmit(fieldValueMap).then(setErrorMessage);
+    onSubmit(fieldValueMap)
+      .then(setErrorMessage)
+      .catch(err => console.error(err));
   };
 
   const renderFormField = ({ item }: ListRenderItemInfo<Field>) => (
@@ -49,7 +55,7 @@ const Form = (props: Props) => {
 
   return (
     <View style={[styles.container, style]}>
-      {title && <Text style={styles.title}>{title}</Text>}
+      {title && <Text style={[styles.title, titleStyle]}>{title}</Text>}
       <FlatList
         data={fields}
         renderItem={renderFormField}
@@ -58,16 +64,18 @@ const Form = (props: Props) => {
       <Text style={styles.error}>{errorMessage}</Text>
       <Pressable
         style={({ pressed }) => [
-          styles.button,
-          pressed ? styles.activeButton : styles.inactiveButton,
+          sharedStyles.button,
+          pressed ? sharedStyles.activeButton : sharedStyles.inactiveButton,
           submitButtonStyle,
         ]}
         onPress={submit}>
         {({ pressed }) => (
           <Text
             style={[
-              styles.buttonText,
-              pressed ? styles.activeButtonText : styles.inactiveButtonText,
+              sharedStyles.buttonText,
+              pressed
+                ? sharedStyles.activeButtonText
+                : sharedStyles.inactiveButtonText,
             ]}>
             {submitButtonText}
           </Text>
@@ -91,29 +99,6 @@ const styles = StyleSheet.create({
     fontFamily: 'OpenSans-Medium',
     fontSize: 12,
     color: '#FF0000',
-  },
-  button: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    alignSelf: 'flex-end',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#000000',
-  },
-  inactiveButton: {
-    backgroundColor: '#000000',
-  },
-  activeButton: {
-    backgroundColor: '#FFFFFF',
-  },
-  buttonText: {
-    fontFamily: 'OpenSans-SemiBold',
-  },
-  inactiveButtonText: {
-    color: '#FFFFFF',
-  },
-  activeButtonText: {
-    color: '#000000',
   },
 });
 

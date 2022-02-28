@@ -7,5 +7,5 @@ export enum Screens {
 export type RootStackParamList = {
   [Screens.Login]: undefined;
   [Screens.ResetPassword]: undefined;
-  [Screens.Welcome]: undefined;
+  [Screens.Welcome]: { username: string };
 };

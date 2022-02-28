@@ -2,13 +2,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { Alert, StatusBar, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Form from '~/components/login/Form';
+import Form from '~/components/form/Form';
 import { RootStackParamList, Screens } from '~/types/navigation';
 import { getUsersAsync } from '~/utils/async-storage';
 import { AsyncStorageKey } from '~/types/async-storage';
-import { FieldValueMap } from '~/types/login';
+import { FieldValueMap } from '~/types/form';
 import { encryptData } from '~/utils/aes-crypto';
 import sharedStyles from '~/styles';
+import { askSavePassword } from '~/utils/login';
 
 const passwordRules = [
   { regex: /(?=.*?[A-Z])/, error: '* At lease 1 uppercase letter' },
@@ -20,7 +21,7 @@ const passwordRules = [
 
 const ResetPassword = ({
   navigation,
-}: NativeStackScreenProps<RootStackParamList>) => {
+}: NativeStackScreenProps<RootStackParamList, Screens.ResetPassword>) => {
   const [currentUser, setCurrentUser] = useState<string | undefined>(undefined);
 
   const onVerifyUsername = async (fieldsValue: FieldValueMap) => {
@@ -28,8 +29,9 @@ const ResetPassword = ({
     const matchedUser = users.find(
       user => user.username === fieldsValue.username,
     );
+    setCurrentUser(matchedUser?.username);
+
     if (matchedUser) {
-      setCurrentUser(matchedUser.username);
       return '';
     } else {
       return 'User is not found';
@@ -63,7 +65,7 @@ const ResetPassword = ({
         Alert.alert('Reset Password', 'Reset password success', [
           {
             text: 'OK',
-            onPress: () => navigation.navigate(Screens.Welcome),
+            onPress: () => askSavePassword(matchedUser, users, navigation),
           },
         ]);
       }

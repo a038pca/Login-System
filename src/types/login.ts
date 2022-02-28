@@ -8,12 +8,7 @@ export interface User extends Credentials {
   askSavePassword: boolean;
 }
 
-export interface Field {
-  key: string;
-  label: string;
-  isPassword?: boolean;
-}
-
-export interface FieldValueMap {
-  [key: string]: string;
+export interface EncryptedData {
+  cipher: string;
+  iv: string;
 }

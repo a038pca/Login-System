@@ -1,31 +1,29 @@
-import React, { memo, useEffect, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TextField } from 'rn-material-ui-textfield';
 import FastImage from 'react-native-fast-image';
 import images from '~/assets/images';
 import * as Keychain from 'react-native-keychain';
 import { RootStackParamList, Screens } from '~/types/navigation';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Credentials, User } from '~/types/login';
+import { Credentials, EncryptedData, User } from '~/types/login';
+import { FieldValueMap } from '~/types/form';
 import { AsyncStorageKey } from '~/types/async-storage';
 import { getUsersAsync } from '~/utils/async-storage';
 import { decryptData, encryptData } from '~/utils/aes-crypto';
+import sharedStyles from '~/styles';
+import Form from '~/components/form/Form';
+import { askSavePassword } from '~/utils/login';
 
-const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
+const banners = [images.banner1, images.banner2, images.banner3];
+
+const Login = ({
+  navigation,
+}: NativeStackScreenProps<RootStackParamList, Screens.Login>) => {
   const [credentials, setCredentials] = useState<Credentials>({
     username: '',
     password: '',
   });
-  const [hidePassword, setHidePassword] = useState(true);
-  const [showError, setShowError] = useState(false);
 
   // Use async storage to mock the user information in server's database
   // Initialize default users (Assume there are more than 1 users)
@@ -34,7 +32,7 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
       .then(serializedUsers => {
         if (!serializedUsers) {
           encryptData('P@ssw0rd')
-            .then(({ cipher, iv }) => {
+            .then(({ cipher, iv }: EncryptedData) => {
               AsyncStorage.setItem(
                 AsyncStorageKey.Users,
                 JSON.stringify([
@@ -47,7 +45,7 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
                 ]),
               );
             })
-            .catch(err => console.error(err));
+            .catch((err: Error) => console.error(err));
         }
       })
       .catch(err => console.error(err));
@@ -65,136 +63,65 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
       .catch(err => console.error(err));
   }, []);
 
-  const getFieldValue = (value: string, fieldName: keyof Credentials) => {
-    credentials[fieldName] = value;
-  };
+  const onLogin = async (fieldValueMap: FieldValueMap) => {
+    // If the credentials are from Keychain, setting default value won't trigger onChangeText in FormField
+    // fieldValueMap may be null and need to merge to credentials
+    const cred = { ...credentials, ...fieldValueMap };
 
-  const onLogin = async () => {
-    try {
-      const users = await getUsersAsync();
-      let matchedUser;
-      for (const user of users) {
-        if (credentials.username === user.username) {
-          const password = await decryptData({
-            cipher: user.password,
-            iv: user.iv,
-          });
+    const users = await getUsersAsync();
+    let matchedUser: User | undefined;
+    for (const user of users) {
+      if (cred.username === user.username) {
+        const password = await decryptData({
+          cipher: user.password,
+          iv: user.iv,
+        });
 
-          if (credentials.password === password) {
-            matchedUser = user;
-            break;
-          }
+        if (cred.password === password) {
+          matchedUser = user;
+          break;
         }
       }
+    }
 
-      if (matchedUser) {
-        setShowError(false);
-
-        if (!matchedUser.askSavePassword) {
-          matchedUser.askSavePassword = true;
-          AsyncStorage.setItem(AsyncStorageKey.Users, JSON.stringify(users));
-
-          Alert.alert('Save Password', 'Do you want to save password?', [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-              onPress: () => navigation.navigate(Screens.Welcome),
-            },
-            {
-              text: 'OK',
-              onPress: async () => {
-                await Keychain.setGenericPassword(
-                  credentials.username,
-                  credentials.password,
-                );
-                navigation.navigate(Screens.Welcome);
-              },
-            },
-          ]);
-        } else {
-          navigation.navigate(Screens.Welcome);
-        }
-      } else {
-        setShowError(true);
-      }
-    } catch (err) {
-      console.error(err);
+    if (matchedUser) {
+      askSavePassword(matchedUser, users, navigation);
+      return '';
+    } else {
+      return 'Incorrect username or password';
     }
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 10 }}>
-      <Text style={{ marginLeft: 10, fontSize: 28 }}>Login</Text>
-      <View
-        style={{
-          marginTop: 16,
-          paddingVertical: 10,
-          paddingHorizontal: 16,
-          backgroundColor: '#FFFFFF',
-          borderRadius: 12,
-        }}>
-        <TextField
-          label="Username"
-          autoCapitalize={'none'}
-          autoCorrect={false}
-          defaultValue={credentials.username}
-          textContentType={'username'}
-          onChangeText={(text: string) => getFieldValue(text, 'username')}
-        />
-        <TextField
-          label="Password"
-          defaultValue={credentials.password}
-          secureTextEntry={hidePassword}
-          textContentType={'password'}
-          onChangeText={(text: string) => getFieldValue(text, 'password')}
-          renderRightAccessory={() => (
-            <Pressable onPress={() => setHidePassword(!hidePassword)}>
-              <FastImage
-                source={
-                  hidePassword ? images.passwordShow : images.passwordHide
-                }
-                style={{
-                  width: 18,
-                  height: 12,
-                }}
-              />
-            </Pressable>
-          )}
-        />
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-          }}>
-          <Text style={{ color: 'red' }}>
-            {showError && 'Incorrect username or password'}
-          </Text>
-          <Pressable onPress={() => navigation.navigate(Screens.ResetPassword)}>
-            <Text style={{ textDecorationLine: 'underline' }}>
-              Forget Password
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-      <Pressable
-        style={{
-          paddingVertical: 10,
-          paddingHorizontal: 10,
-          alignItems: 'center',
-        }}
-        onPress={onLogin}>
-        <Text style={{ fontSize: 18 }}>Login</Text>
-      </Pressable>
-      <View>
+    <View style={[sharedStyles.root, { justifyContent: 'center' }]}>
+      <Form
+        title={'Login'}
+        titleStyle={styles.title}
+        fields={[
+          {
+            key: 'username',
+            label: 'Username',
+            defaultValue: credentials.username,
+          },
+          {
+            key: 'password',
+            label: 'Password',
+            isPassword: true,
+            forgetPassword: true,
+            defaultValue: credentials.password,
+          },
+        ]}
+        submitButtonStyle={styles.loginButton}
+        submitButtonText={'Login'}
+        onSubmit={onLogin}
+      />
+      <View style={styles.bannerList}>
         <FlatList
-          data={[images.banner1, images.banner2, images.banner3]}
+          data={banners}
           renderItem={({ item }) => (
-            <FastImage
-              source={item}
-              style={{ width: 132, height: 76, borderRadius: 8 }}
-            />
+            <FastImage source={item} style={styles.banner} />
           )}
-          ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
+          ItemSeparatorComponent={() => <View style={styles.bannerSeparator} />}
           horizontal
           showsHorizontalScrollIndicator={false}
         />
@@ -203,6 +130,27 @@ const Login = ({ navigation }: NativeStackScreenProps<RootStackParamList>) => {
   );
 };
 
-export default memo(Login);
+const styles = StyleSheet.create({
+  title: {
+    fontSize: 42,
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  loginButton: {
+    alignSelf: 'center',
+    marginTop: 40,
+  },
+  bannerList: {
+    marginTop: 40,
+  },
+  banner: {
+    width: 132,
+    height: 76,
+    borderRadius: 8,
+  },
+  bannerSeparator: {
+    width: 8,
+  },
+});
 
-const styles = StyleSheet.create({});
+export default Login;
